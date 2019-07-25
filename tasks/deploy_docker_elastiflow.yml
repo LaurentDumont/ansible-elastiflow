@@ -1,0 +1,66 @@
+---
+- name: Ensure the data directory is present for ES.
+  file:
+    state: directory
+    path: "{{ ES_DATA_DIR }}"
+    owner: 1000
+    group: 1000
+
+- name: Ensure the data directory is present for ES.
+  file:
+    state: directory
+    path: /srv
+
+- name: Ensure the ES container is running.
+  docker_container:
+    name: dhmtl-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.0.1
+    restart_policy: always
+    ulimits: memlock:-1:-1
+    network_mode: host
+    volumes:
+      - "{{ ES_DATA_DIR }}:/usr/share/elasticsearch/data"
+    env:
+      ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+      cluster.name: "elastiflow"
+      bootstrap.memory_lock: "true"
+      network.host: "0.0.0.0"
+      http.port: "9200"
+      discovery.type: "single-node"
+      indices.query.bool.max_clause_count: "8192"
+      search.max_buckets: "100000"
+      action.destructive_requires_name: "true"
+
+- name: Ensure that the Kibana container is running.
+  docker_container:
+    name: dhmtl-kibana
+    image: docker.elastic.co/kibana/kibana-oss:7.0.1
+    restart_policy: always
+    network_mode: host
+    env:
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "5601"
+      ELASTICSEARCH_HOSTS: "http://127.0.0.1:9200"
+      KIBANA_DEFAULTAPPID: "dashboard/653cf1e0-2fd2-11e7-99ed-49759aed30f5"
+      LOGGING_QUIET: "true"
+
+- name: Ensure that the Logstash container is running.
+  docker_container:
+    name: dhmtl-logstash
+    image: robcowart/elastiflow-logstash-oss:3.5.0_7.0.1
+    restart_policy: always
+    network_mode: host
+    env:
+       # JVM Heap size - this MUST be at least 3GB (4GB preferred)
+      LS_JAVA_OPTS: "-Xms4g -Xmx4g"
+
+      # ElastiFlow global configuration
+      ELASTIFLOW_DEFAULT_APPID_SRCTYPE: "__UNKNOWN"
+
+      # Name resolution option
+      ELASTIFLOW_RESOLVE_IP2HOST: "false"
+      ELASTIFLOW_NAMESERVER: "127.0.0.1"
+
+      ELASTIFLOW_NETFLOW_IPV4_PORT: "2055"
+      ELASTIFLOW_SFLOW_IPV4_PORT: "6343"
+      ELASTIFLOW_IPFIX_TCP_IPV4_PORT: "4739"     

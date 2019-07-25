@@ -1,0 +1,5 @@
+---
+# defaults file for cmaker-elastiflow
+
+ES_DATA_DIR: /var/lib/elastiflow_es
+ES_GIT_DIR: /srv/elastiflow-git
